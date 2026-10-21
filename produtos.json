@@ -2,16 +2,15 @@
   "queda_minima_pct": 5,
   "perfumes": [
     {
-      "nome": "Fervo Instenso Granado",
-      "preco_alvo": 200.00,
+      "nome": "Exemplo: Perfume 1 (edite o nome)",
+      "preco_alvo": 300.00,
       "links": [
-        "https://www.belezanaweb.com.br/produto/fervo-intenso-vintage-granado-parfum-perfume-unissex-75ml?q=fervo",
+        "https://www.belezanaweb.com.br/COLE-O-LINK-AQUI",
         "https://www.sephora.com.br/COLE-O-LINK-AQUI",
         "https://www.sieno.com.br/COLE-O-LINK-AQUI",
-        "https://produto.mercadolivre.com.br/MLB-5966036052-fervo-intenso-vintage-granado-parfum-perfume-unissex-75ml-_JM?sid=cart&pdp_filters=item_id%3AMLB5966036052#polycard_client=cart_list&wid=MLB5966036052&sid=cart",
+        "https://produto.mercadolivre.com.br/COLE-O-LINK-AQUI",
         "https://shopee.com.br/COLE-O-LINK-AQUI-i.SHOPID.ITEMID",
-        "https://www.amazon.com.br/Granado-Perfume-Vintage-Fervo-Intenso/dp/B0G216DVCG"
-        "https://www.granado.com.br/granado/perfume-fervo-intenso-granado-75ml"
+        "https://www.amazon.com.br/dp/COLE-O-ASIN"
       ]
     }
   ]

@@ -248,7 +248,13 @@ def enviar_email(assunto, texto):
     msg = EmailMessage()
     msg["Subject"], msg["From"], msg["To"] = assunto, user, destino
     msg.set_content(texto)
-    with smtplib.SMTP_SSL(host, int(os.getenv("SMTP_PORT", "465"))) as s:
+    porta = int(os.getenv("SMTP_PORT") or "465")
+    if porta == 465:  # SSL direto (Gmail)
+        servidor = smtplib.SMTP_SSL(host, porta, timeout=30)
+    else:  # STARTTLS, porta 587 (Outlook/Hotmail)
+        servidor = smtplib.SMTP(host, porta, timeout=30)
+        servidor.starttls()
+    with servidor as s:
         s.login(user, senha)
         s.send_message(msg)
     return True

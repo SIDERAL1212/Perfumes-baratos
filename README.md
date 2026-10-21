@@ -31,13 +31,21 @@ No repositório: **Settings → Secrets and variables → Actions → New reposi
 
 **E-mail (opcional):** crie `SMTP_HOST` (ex.: `smtp.gmail.com`), `SMTP_USER`, `SMTP_PASS`
 (no Gmail, use uma *senha de app*) e `EMAIL_DESTINO`. `SMTP_PORT` só se não for 465.
+Outlook/Hotmail: `SMTP_HOST=smtp-mail.outlook.com` e `SMTP_PORT=587` (a Microsoft vem desativando senha em envio por script; se falhar, use Telegram ou envie por um Gmail).
 
 ### 4. Ligar o painel
 **Settings → Pages → Source: Deploy from a branch → Branch: main, pasta `/docs`**.
 O endereço do painel aparece ali mesmo. (Em repositório privado, Pages exige plano pago do GitHub;
 se preferir, deixe o repositório público — os links dos produtos ficam visíveis, mas os secrets não.)
 
-### 5. Primeira rodada
+### 5. Usar o site
+O endereço do GitHub Pages abre a interface: **Painel** (preços e histórico), **Perfumes e links**
+(adicionar, editar e remover perfumes) e **Conexão com o GitHub**. Para o site salvar a lista e disparar a
+leitura de preços, crie um token fine-grained só para este repositório (Contents e Actions: Read and write)
+e cole na aba Conexão. O token fica guardado apenas no seu navegador. Sem token, o painel funciona e você
+usa "Copiar JSON" para colar em `produtos.json`.
+
+### 6. Primeira rodada
 Aba **Actions → Rastrear preços → Run workflow**. Depois disso roda sozinho a cada 4 horas
 (para mudar, edite o `cron` em `.github/workflows/rastrear.yml`).
 
