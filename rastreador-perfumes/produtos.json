@@ -1,0 +1,17 @@
+{
+  "queda_minima_pct": 5,
+  "perfumes": [
+    {
+      "nome": "Exemplo: Perfume 1 (edite o nome)",
+      "preco_alvo": 300.00,
+      "links": [
+        "https://www.belezanaweb.com.br/COLE-O-LINK-AQUI",
+        "https://www.sephora.com.br/COLE-O-LINK-AQUI",
+        "https://www.sieno.com.br/COLE-O-LINK-AQUI",
+        "https://produto.mercadolivre.com.br/COLE-O-LINK-AQUI",
+        "https://shopee.com.br/COLE-O-LINK-AQUI-i.SHOPID.ITEMID",
+        "https://www.amazon.com.br/dp/COLE-O-ASIN"
+      ]
+    }
+  ]
+}

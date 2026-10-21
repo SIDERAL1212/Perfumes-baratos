@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar de Perfumes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: cabeçalho fixo com abas; painel em lista de perfumes, cada um com gráfico e tabela de lojas */
+  :root {
+    --bg: #f2f5f4; --surface: #ffffff; --ink: #14201e; --muted: #5b6a67; --line: #dce3e1;
+    --soft: #e5eeeb; --accent: #0f6b5c; --on-accent: #ffffff;
+    --good: #1b7f4b; --warn: #a85f00; --bad: #b3382c;
+    --c-ml: #b08400; --c-shopee: #dd4f24; --c-bnw: #c2287a; --c-sephora: #3f4a48; --c-sieno: #2a74d6; --c-amazon: #1a9466; --c-other: #7a8886;
+    --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --f-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+    --f-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1514; --surface: #162120; --ink: #e8f0ee; --muted: #92a39f; --line: #263431;
+      --soft: #1c2c29; --accent: #4fc2a8; --on-accent: #08201b;
+      --good: #5fd08f; --warn: #e3a843; --bad: #f07f72;
+      --c-ml: #e0b52e; --c-shopee: #ff7a50; --c-bnw: #ee5fa7; --c-sephora: #b9c6c3; --c-sieno: #6aa6f5; --c-amazon: #45cf98; --c-other: #94a3a0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1514; --surface: #162120; --ink: #e8f0ee; --muted: #92a39f; --line: #263431;
+    --soft: #1c2c29; --accent: #4fc2a8; --on-accent: #08201b;
+    --good: #5fd08f; --warn: #e3a843; --bad: #f07f72;
+    --c-ml: #e0b52e; --c-shopee: #ff7a50; --c-bnw: #ee5fa7; --c-sephora: #b9c6c3; --c-sieno: #6aa6f5; --c-amazon: #45cf98; --c-other: #94a3a0;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 var(--f-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 56px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  a { color: var(--accent); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  header.top { padding-block: 22px 0; display: grid; gap: 14px; }
+  .brandrow { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px 24px; flex-wrap: wrap; }
+  h1 { font: 700 28px/1.1 var(--f-display); letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .stamp { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab { background: none; border: 0; padding: 10px 14px; margin-bottom: -1px; cursor: pointer; color: var(--muted);
+         border-bottom: 2px solid transparent; font-weight: 500; white-space: nowrap; }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .tab:hover { color: var(--ink); }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 8px; cursor: pointer;
+         border: 1px solid var(--line); background: var(--surface); font-weight: 500; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.quiet { background: none; border-color: transparent; color: var(--muted); padding: 6px 8px; }
+  .btn.quiet:hover { color: var(--ink); border-color: var(--line); }
+  .btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+  .notice { margin-top: 18px; padding: 10px 14px; border-radius: 8px; background: var(--soft); font-size: 14px; }
+  .notice b { font-weight: 600; }
+  #msg { min-height: 0; }
+  #msg .notice.err { background: color-mix(in srgb, var(--bad) 14%, var(--surface)); }
+  #msg .notice.ok { background: color-mix(in srgb, var(--good) 14%, var(--surface)); }
+
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 24px; padding-block: 24px 8px; }
+  .stat { display: grid; gap: 2px; }
+  .stat b { font: 500 30px/1.1 var(--f-mono); letter-spacing: -0.02em; }
+  .stat span { color: var(--muted); font-size: 13px; }
+  .stat.alert b { color: var(--good); }
+  .stat.fail b { color: var(--bad); }
+
+  .perfume { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-top: 16px; min-width: 0; }
+  .ph { display: flex; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; align-items: flex-start; }
+  .ph h2 { font: 700 19px/1.25 var(--f-display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .best { margin-top: 6px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .best .v { font: 500 28px/1 var(--f-mono); letter-spacing: -0.02em; }
+  .best .where { color: var(--muted); font-size: 14px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 500; white-space: nowrap;
+          background: var(--soft); color: var(--muted); }
+  .pill.good { background: color-mix(in srgb, var(--good) 16%, var(--surface)); color: var(--good); }
+  .pill.warn { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); color: var(--warn); }
+
+  .chart { margin-top: 14px; width: 100%; min-width: 0; }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart text { font: 11px var(--f-mono); fill: var(--muted); }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart .alvo { stroke: var(--warn); stroke-width: 1.2; stroke-dasharray: 5 4; }
+  .chart .alvo-t { fill: var(--warn); }
+  .chart .nodata { font: 14px var(--f-body); fill: var(--muted); }
+
+  .tablewrap { overflow-x: auto; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; padding: 8px 10px 8px 0; white-space: nowrap; }
+  td { padding: 10px 10px 10px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  th.n, td.n { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-right: 0; padding-left: 14px; }
+  td.store { min-width: 150px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+  td.store a { color: var(--ink); text-underline-offset: 3px; }
+  tr.lowest td.n.now { color: var(--good); font-weight: 500; }
+  .tag { font: 12px var(--f-body); color: var(--good); margin-left: 8px; }
+  .delta.down { color: var(--good); }
+  .delta.up { color: var(--bad); }
+  .lojaerr { color: var(--bad); font-size: 12.5px; margin-top: 2px; max-width: 46ch; }
+
+  .empty { text-align: center; color: var(--muted); padding: 56px 16px; }
+  .empty h2 { font: 700 20px var(--f-display); color: var(--ink); margin: 0 0 6px; }
+
+  /* Gerenciar */
+  .section-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding-block: 24px 0; }
+  .section-h h2 { font: 700 20px var(--f-display); margin: 0; }
+  .hint { color: var(--muted); font-size: 14px; margin: 4px 0 0; max-width: 62ch; }
+  .field { display: grid; gap: 5px; min-width: 0; }
+  .field label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .input { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); min-width: 0; }
+  .input:focus-visible { outline-offset: 0; border-color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: 1fr 180px; gap: 14px; }
+  .links { display: grid; gap: 8px; margin-top: 16px; }
+  .linkrow { display: grid; grid-template-columns: 110px 1fr auto; gap: 8px; align-items: center; }
+  .loja { font-size: 13px; color: var(--muted); display: flex; align-items: center; min-width: 0; }
+  .loja.unk { color: var(--warn); }
+  .row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .global { display: flex; gap: 14px; align-items: end; flex-wrap: wrap; margin-top: 16px; }
+  .global .field { width: 220px; }
+  .savebar { position: sticky; bottom: 0; margin-top: 20px; padding: 12px 0; background: var(--bg); display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+             border-top: 1px solid var(--line); }
+  .savebar .dirty { color: var(--warn); font-size: 14px; margin-right: auto; }
+  textarea.json { width: 100%; min-height: 220px; font: 13px/1.5 var(--f-mono); padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); resize: vertical; }
+
+  .conn { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-top: 16px; display: grid; gap: 14px; }
+  .conn ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--muted); font-size: 14px; }
+  .conn ol b { color: var(--ink); font-weight: 600; }
+  .conn code { font: 13px var(--f-mono); background: var(--soft); padding: 1px 6px; border-radius: 4px; color: var(--ink); }
+  .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 24px; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .linkrow { grid-template-columns: 1fr auto; }
+    .linkrow .loja { grid-column: 1 / -1; }
+    .perfume, .conn { padding: 16px; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn, .tab { transition: border-color .15s, color .15s, filter .15s; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brandrow">
+      <div>
+        <h1>Radar de Perfumes</h1>
+        <div class="stamp" id="stamp">Carregando…</div>
+      </div>
+      <button class="btn primary" id="run" type="button">Rodar agora</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-painel" data-tab="painel" type="button">Painel</button>
+      <button class="tab" role="tab" id="t-perfumes" data-tab="perfumes" type="button">Perfumes e links</button>
+      <button class="tab" role="tab" id="t-conexao" data-tab="conexao" type="button">Conexão com o GitHub</button>
+    </div>
+  </header>
+
+  <div id="msg" aria-live="polite"></div>
+
+  <section id="v-painel" hidden>
+    <div id="demo-note" class="notice" hidden><b>Dados de exemplo.</b> Quando o rastreador rodar pela primeira vez no seu repositório, os preços reais aparecem aqui no lugar destes.</div>
+    <div class="summary" id="summary"></div>
+    <div id="lista"></div>
+  </section>
+
+  <section id="v-perfumes" hidden>
+    <div class="section-h">
+      <div>
+        <h2>Perfumes e links</h2>
+        <p class="hint">Cole o link da página do produto em cada loja. Pode deixar só as lojas que quiser. O rastreador avisa quando o preço ficar igual ou abaixo do alvo.</p>
+      </div>
+      <button class="btn" id="add-perfume" type="button">Adicionar perfume</button>
+    </div>
+    <div class="global">
+      <div class="field">
+        <label for="queda">Avisar também se cair pelo menos (%)</label>
+        <input class="input" id="queda" type="number" min="0" max="90" step="1" inputmode="numeric">
+      </div>
+    </div>
+    <div id="editor"></div>
+    <div class="savebar">
+      <span class="dirty" id="dirty" hidden>Alterações ainda não salvas</span>
+      <button class="btn quiet" id="discard" type="button">Descartar</button>
+      <button class="btn" id="copy-json" type="button">Copiar JSON</button>
+      <button class="btn primary" id="save" type="button">Salvar no GitHub</button>
+    </div>
+    <details style="margin-top:16px">
+      <summary style="cursor:pointer;color:var(--muted);font-size:14px">Ver arquivo produtos.json</summary>
+      <textarea class="json" id="json-view" readonly spellcheck="false" aria-label="Conteúdo de produtos.json" style="margin-top:10px"></textarea>
+    </details>
+  </section>
+
+  <section id="v-conexao" hidden>
+    <div class="section-h"><div><h2>Conexão com o GitHub</h2>
+      <p class="hint">Com a conexão, este site salva a lista de perfumes no seu repositório e dispara uma leitura de preços quando você pedir. Sem ela, você ainda vê o painel e pode copiar o JSON para colar no GitHub.</p></div></div>
+    <div class="conn">
+      <div class="grid3">
+        <div class="field"><label for="gh-repo">Repositório (usuário/nome)</label>
+          <input class="input" id="gh-repo" placeholder="maria/rastreador-perfumes" autocomplete="off" spellcheck="false"></div>
+        <div class="field"><label for="gh-branch">Branch</label>
+          <input class="input" id="gh-branch" value="main" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div class="field"><label for="gh-token">Token de acesso</label>
+        <input class="input" id="gh-token" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false"></div>
+      <ol>
+        <li>No GitHub, abra <b>Settings → Developer settings → Personal access tokens → Fine-grained tokens</b> e clique em <b>Generate new token</b>.</li>
+        <li>Em <b>Repository access</b>, escolha <b>Only select repositories</b> e marque só o repositório do rastreador.</li>
+        <li>Em <b>Permissions → Repository permissions</b>, coloque <b>Contents: Read and write</b> e <b>Actions: Read and write</b>.</li>
+        <li>Gere o token, copie e cole acima. Ele fica guardado só neste navegador e é enviado apenas ao GitHub.</li>
+      </ol>
+      <div class="row-actions">
+        <button class="btn primary" id="gh-save" type="button">Salvar e testar</button>
+        <button class="btn quiet" id="gh-clear" type="button">Remover token deste navegador</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var onPages = /\.github\.io$/i.test(location.hostname);
+  var state = { hist: null, demo: false, model: null, saved: "", sha: null, tab: "painel", loadedModel: false };
+  var LOJAS = [
+    ["mercadolivre", "Mercado Livre", "--c-ml"], ["mercadolibre", "Mercado Livre", "--c-ml"],
+    ["shopee", "Shopee", "--c-shopee"], ["belezanaweb", "Beleza na Web", "--c-bnw"],
+    ["sephora", "Sephora", "--c-sephora"], ["sieno", "Sieno", "--c-sieno"],
+    ["amazon", "Amazon", "--c-amazon"], ["amzn", "Amazon", "--c-amazon"]
+  ];
+  var COR = { "Mercado Livre": "--c-ml", "Shopee": "--c-shopee", "Beleza na Web": "--c-bnw", "Sephora": "--c-sephora", "Sieno": "--c-sieno", "Amazon": "--c-amazon" };
+
+  function lojaDe(url) {
+    var h = ""; try { h = new URL(url).hostname.toLowerCase(); } catch (e) { return null; }
+    for (var i = 0; i < LOJAS.length; i++) if (h.indexOf(LOJAS[i][0]) >= 0) return LOJAS[i][1];
+    return null;
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function brl(v) { return v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+  function cor(loja) { return "var(" + (COR[loja] || "--c-other") + ")"; }
+  function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+
+  function say(text, kind) {
+    $("msg").innerHTML = text ? '<div class="notice ' + (kind || "") + '">' + text + "</div>" : "";
+    if (text && kind === "ok") setTimeout(function () { if ($("msg").textContent === text.replace(/<[^>]+>/g, "")) say(""); }, 7000);
+  }
+
+  /* ---------- dados de exemplo ---------- */
+  function demoData() {
+    var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    var now = Date.now(), dia = 864e5, itens = {};
+    var cat = [
+      ["Dior Sauvage EDT 100 ml", 520, [["https://www.sephora.com.br/sauvage", "Sephora", 559], ["https://www.belezanaweb.com.br/sauvage", "Beleza na Web", 532], ["https://www.amazon.com.br/dp/B0SAUV", "Amazon", 548], ["https://produto.mercadolivre.com.br/MLB-sauvage", "Mercado Livre", 505], ["https://shopee.com.br/sauvage-i.123.456", "Shopee", null]]],
+      ["Good Girl Carolina Herrera 80 ml", 590, [["https://www.sephora.com.br/goodgirl", "Sephora", 649], ["https://www.belezanaweb.com.br/goodgirl", "Beleza na Web", 612], ["https://www.sieno.com.br/goodgirl", "Sieno", 598], ["https://www.amazon.com.br/dp/B0GOOD", "Amazon", null]]],
+      ["Natura Kaiak Aventura 100 ml", 130, [["https://www.belezanaweb.com.br/kaiak", "Beleza na Web", 149], ["https://produto.mercadolivre.com.br/MLB-kaiak", "Mercado Livre", 139], ["https://shopee.com.br/kaiak-i.321.654", "Shopee", 127]]]
+    ];
+    cat.forEach(function (p) {
+      p[2].forEach(function (l, li) {
+        var leit = [], v = l[2];
+        if (v != null) for (var d = 28; d >= 0; d--) {
+          v = v * (1 + (rnd() - 0.52) * 0.035);
+          if (d === 9 && li === 0) v *= 0.93;
+          leit.push({ t: new Date(now - d * dia - li * 36e5).toISOString(), preco: Math.round(v * 100) / 100 });
+        }
+        var it = { leituras: leit, nome: p[0], loja: l[1], alvo: p[1] };
+        if (v == null) it.erro = l[1] === "Shopee" ? "Shopee respondeu HTTP 403 (bloqueio anti-robô)" : "Amazon pediu captcha (bloqueou o robô)";
+        itens[l[0]] = it;
+      });
+    });
+    return { atualizado_em: new Date(now - 36e5 * 2).toISOString(), itens: itens };
+  }
+
+  /* ---------- painel ---------- */
+  function agrupar(hist) {
+    var g = {}, ordem = [];
+    Object.keys(hist.itens || {}).forEach(function (url) {
+      var it = hist.itens[url], ls = it.leituras || [];
+      if (!g[it.nome]) { g[it.nome] = { nome: it.nome, alvo: it.alvo, lojas: [] }; ordem.push(it.nome); }
+      var atual = ls.length ? ls[ls.length - 1].preco : null;
+      var ant = ls.length > 1 ? ls[ls.length - 2].preco : null;
+      var menor = ls.length ? Math.min.apply(null, ls.map(function (x) { return x.preco; })) : null;
+      g[it.nome].lojas.push({ url: url, loja: it.loja || lojaDe(url) || "Loja", atual: atual, ant: ant, menor: menor, leituras: ls, erro: it.erro });
+    });
+    return ordem.map(function (n) { return g[n]; });
+  }
+
+  function renderPainel() {
+    var grupos = agrupar(state.hist || { itens: {} });
+    var h = state.hist;
+    $("demo-note").hidden = !state.demo;
+    $("stamp").textContent = h && h.atualizado_em ? "Última leitura em " + new Date(h.atualizado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "Nenhuma leitura ainda";
+    if (!grupos.length) {
+      $("summary").innerHTML = "";
+      $("lista").innerHTML = '<div class="empty"><h2>Nenhum preço lido ainda</h2><p>Cadastre os perfumes na aba “Perfumes e links” e depois clique em “Rodar agora”.</p></div>';
+      return;
+    }
+    var lojasLidas = 0, erros = 0, noAlvo = 0, total = 0;
+    grupos.forEach(function (g) {
+      g.melhor = null;
+      g.lojas.forEach(function (l) {
+        total++;
+        if (l.atual != null) { lojasLidas++; if (g.melhor == null || l.atual < g.melhor.atual) g.melhor = l; }
+        if (l.erro) erros++;
+      });
+      if (g.alvo && g.melhor && g.melhor.atual <= g.alvo) noAlvo++;
+    });
+    $("summary").innerHTML =
+      '<div class="stat"><b>' + grupos.length + '</b><span>perfumes acompanhados</span></div>' +
+      '<div class="stat"><b>' + lojasLidas + "/" + total + '</b><span>links lidos na última rodada</span></div>' +
+      '<div class="stat' + (noAlvo ? " alert" : "") + '"><b>' + noAlvo + '</b><span>no preço-alvo ou abaixo</span></div>' +
+      '<div class="stat' + (erros ? " fail" : "") + '"><b>' + erros + '</b><span>links com erro</span></div>';
+
+    $("lista").innerHTML = grupos.map(function (g, gi) {
+      var pill, m = g.melhor;
+      if (!m) pill = '<span class="pill">Sem leitura</span>';
+      else if (!g.alvo) pill = '<span class="pill">Sem preço-alvo</span>';
+      else if (m.atual <= g.alvo) pill = '<span class="pill good">No alvo de ' + brl(g.alvo) + "</span>";
+      else pill = '<span class="pill warn">Faltam ' + brl(m.atual - g.alvo) + " para o alvo</span>";
+      var rows = g.lojas.map(function (l) {
+        var d = "";
+        if (l.atual != null && l.ant != null && l.ant !== l.atual) {
+          var p = (l.atual / l.ant - 1) * 100;
+          d = '<span class="delta ' + (p < 0 ? "down" : "up") + '">' + (p < 0 ? "−" : "+") + Math.abs(p).toFixed(1).replace(".", ",") + "%</span>";
+        } else if (l.atual != null) d = '<span style="color:var(--muted)">0,0%</span>';
+        var low = m && l === m;
+        return '<tr class="' + (low ? "lowest" : "") + '"><td class="store"><span class="dot" style="background:' + cor(l.loja) + '"></span><a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.loja) + "</a>" +
+          (low ? '<span class="tag">menor preço</span>' : "") +
+          (l.erro ? '<div class="lojaerr">' + esc(l.erro) + "</div>" : "") +
+          '</td><td class="n now">' + brl(l.atual) + '</td><td class="n">' + d + '</td><td class="n">' + brl(l.menor) + "</td></tr>";
+      }).join("");
+      return '<article class="perfume"><div class="ph"><div><h2>' + esc(g.nome) + '</h2><div class="best"><span class="v">' + (m ? brl(m.atual) : "—") +
+        '</span><span class="where">' + (m ? "na " + esc(m.loja) : "") + "</span></div></div>" + pill + "</div>" +
+        '<div class="chart" id="ch' + gi + '"></div>' +
+        '<div class="tablewrap"><table><thead><tr><th>Loja</th><th class="n">Agora</th><th class="n">Desde a última</th><th class="n">Menor visto</th></tr></thead><tbody>' + rows + "</tbody></table></div></article>";
+    }).join("");
+    desenharGraficos(grupos);
+  }
+
+  function nice(range, n) {
+    var raw = range / n, mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / mag;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * mag;
+  }
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function desenharGraficos(grupos) {
+    grupos.forEach(function (g, gi) {
+      var el = $("ch" + gi); if (!el) return;
+      var W = Math.max(280, el.clientWidth), H = W < 480 ? 170 : 200, m = { l: 52, r: 12, t: 10, b: 24 };
+      var series = g.lojas.filter(function (l) { return l.leituras.length; }).map(function (l) {
+        return { loja: l.loja, pts: l.leituras.map(function (x) { return { t: Date.parse(x.t), v: x.preco }; }) };
+      });
+      if (!series.length) { el.innerHTML = '<svg viewBox="0 0 ' + W + " 60" + '"><text class="nodata" x="0" y="34">Sem histórico ainda para este perfume.</text></svg>'; return; }
+      var all = [].concat.apply([], series.map(function (s) { return s.pts; }));
+      var tmin = Math.min.apply(null, all.map(function (p) { return p.t; })), tmax = Math.max.apply(null, all.map(function (p) { return p.t; }));
+      if (tmax - tmin < 36e5) { tmin -= 12 * 36e5; tmax += 12 * 36e5; }
+      var vals = all.map(function (p) { return p.v; }); if (g.alvo) vals.push(g.alvo);
+      var vmin = Math.min.apply(null, vals), vmax = Math.max.apply(null, vals);
+      if (vmax - vmin < 1) { vmin -= 5; vmax += 5; }
+      var step = nice(vmax - vmin, 4);
+      vmin = Math.floor(vmin / step) * step; vmax = Math.ceil(vmax / step) * step;
+      var X = function (t) { return m.l + (t - tmin) / (tmax - tmin) * (W - m.l - m.r); };
+      var Y = function (v) { return m.t + (1 - (v - vmin) / (vmax - vmin)) * (H - m.t - m.b); };
+      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Histórico de preços de ' + esc(g.nome) + '">';
+      for (var v = vmin; v <= vmax + step / 2; v += step) {
+        s += '<line class="grid" x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '"/>' +
+          '<text x="' + (m.l - 8) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end">' + v.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "</text>";
+      }
+      var nx = W < 480 ? 3 : 5, curto = (tmax - tmin) < 2 * 864e5;
+      for (var i = 0; i < nx; i++) {
+        var t = tmin + (tmax - tmin) * i / (nx - 1), d = new Date(t);
+        var lab = curto ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+        s += '<text x="' + X(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="' + (i === 0 ? "start" : i === nx - 1 ? "end" : "middle") + '">' + lab + "</text>";
+      }
+      if (g.alvo) {
+        s += '<line class="alvo" x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + Y(g.alvo).toFixed(1) + '" y2="' + Y(g.alvo).toFixed(1) + '"/>' +
+          '<text class="alvo-t" x="' + (m.l + 4) + '" y="' + (Y(g.alvo) - 5).toFixed(1) + '" text-anchor="start">alvo ' + g.alvo.toLocaleString("pt-BR", { maximumFractionDigits: 0 }) + "</text>";
+      }
+      series.forEach(function (se) {
+        var c = cor(se.loja);
+        if (se.pts.length > 1) s += '<polyline fill="none" stroke="' + c + '" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" points="' +
+          se.pts.map(function (p) { return X(p.t).toFixed(1) + "," + Y(p.v).toFixed(1); }).join(" ") + '"/>';
+        var last = se.pts[se.pts.length - 1];
+        s += '<circle cx="' + X(last.t).toFixed(1) + '" cy="' + Y(last.v).toFixed(1) + '" r="4" fill="' + c + '" stroke="var(--surface)" stroke-width="2"><title>' +
+          esc(se.loja) + ": " + brl(last.v) + "</title></circle>";
+      });
+      el.innerHTML = s + "</svg>";
+    });
+  }
+
+  /* ---------- editor ---------- */
+  function modelVazio() { return { queda_minima_pct: 5, perfumes: [] }; }
+  function modelDoHistorico(h) {
+    var mo = modelVazio(), map = {};
+    Object.keys((h && h.itens) || {}).forEach(function (url) {
+      var it = h.itens[url];
+      if (!map[it.nome]) { map[it.nome] = { nome: it.nome, preco_alvo: it.alvo || null, links: [] }; mo.perfumes.push(map[it.nome]); }
+      map[it.nome].links.push(url);
+    });
+    return mo;
+  }
+  function serial() {
+    var mo = state.model;
+    return JSON.stringify({
+      queda_minima_pct: Number(mo.queda_minima_pct) || 0,
+      perfumes: mo.perfumes.map(function (p) {
+        var o = { nome: p.nome.trim() || "Sem nome" };
+        if (p.preco_alvo) o.preco_alvo = Number(p.preco_alvo);
+        o.links = p.links.map(function (x) { return x.trim(); }).filter(Boolean);
+        return o;
+      })
+    }, null, 2) + "\n";
+  }
+  function marcarSujo() {
+    var s = serial();
+    $("dirty").hidden = s === state.saved;
+    $("json-view").value = s;
+  }
+  function renderEditor() {
+    var mo = state.model; if (!mo) return;
+    $("queda").value = mo.queda_minima_pct;
+    if (!mo.perfumes.length) {
+      $("editor").innerHTML = '<div class="empty"><h2>Nenhum perfume cadastrado</h2><p>Clique em “Adicionar perfume” para começar.</p></div>';
+    } else {
+      $("editor").innerHTML = mo.perfumes.map(function (p, i) {
+        var links = p.links.map(function (u, j) {
+          var lj = u.trim() ? lojaDe(u) : null;
+          return '<div class="linkrow"><div class="loja' + (u.trim() && !lj ? " unk" : "") + '" id="lj-' + i + "-" + j + '">' + labelLoja(u) + "</div>" +
+            '<input class="input" id="link-' + i + "-" + j + '" data-p="' + i + '" data-l="' + j + '" value="' + esc(u) + '" placeholder="Cole o link do produto" spellcheck="false" aria-label="Link do produto ' + (j + 1) + '">' +
+            '<button class="btn quiet" type="button" data-act="rm-link" data-p="' + i + '" data-l="' + j + '" aria-label="Remover link">Remover</button></div>';
+        }).join("");
+        return '<article class="perfume"><div class="grid2"><div class="field"><label for="nome-' + i + '">Nome do perfume</label>' +
+          '<input class="input" id="nome-' + i + '" data-p="' + i + '" data-f="nome" value="' + esc(p.nome) + '" placeholder="Ex.: Dior Sauvage EDT 100 ml"></div>' +
+          '<div class="field"><label for="alvo-' + i + '">Avisar abaixo de (R$)</label><input class="input" id="alvo-' + i + '" data-p="' + i + '" data-f="alvo" type="number" min="0" step="0.01" inputmode="decimal" value="' + (p.preco_alvo || "") + '" placeholder="300"></div></div>' +
+          '<div class="links">' + links + "</div>" +
+          '<div class="row-actions"><button class="btn" type="button" data-act="add-link" data-p="' + i + '">Adicionar link</button>' +
+          '<button class="btn quiet" type="button" data-act="rm-perfume" data-p="' + i + '">Remover perfume</button></div></article>';
+      }).join("");
+    }
+    marcarSujo();
+  }
+  function labelLoja(u) {
+    if (!u.trim()) return "Loja";
+    var lj = lojaDe(u);
+    return lj ? '<span class="dot" style="background:' + cor(lj) + '"></span>' + esc(lj) : "Loja não reconhecida";
+  }
+
+  $("editor").addEventListener("input", function (e) {
+    var t = e.target, p = state.model.perfumes[+t.dataset.p]; if (!p) return;
+    if (t.dataset.f === "nome") p.nome = t.value;
+    else if (t.dataset.f === "alvo") p.preco_alvo = t.value ? Number(t.value) : null;
+    else if (t.dataset.l != null) {
+      p.links[+t.dataset.l] = t.value;
+      var lj = lojaDe(t.value), box = $("lj-" + t.dataset.p + "-" + t.dataset.l);
+      box.className = "loja" + (t.value.trim() && !lj ? " unk" : ""); box.innerHTML = labelLoja(t.value);
+    }
+    marcarSujo();
+  });
+  $("editor").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-act]"); if (!b) return;
+    var p = state.model.perfumes[+b.dataset.p], a = b.dataset.act;
+    if (a === "add-link") { p.links.push(""); renderEditor(); var n = $("link-" + b.dataset.p + "-" + (p.links.length - 1)); if (n) n.focus(); }
+    else if (a === "rm-link") { p.links.splice(+b.dataset.l, 1); renderEditor(); }
+    else if (a === "rm-perfume") { state.model.perfumes.splice(+b.dataset.p, 1); renderEditor(); }
+  });
+  $("queda").addEventListener("input", function () { state.model.queda_minima_pct = $("queda").value; marcarSujo(); });
+  $("add-perfume").addEventListener("click", function () {
+    if (!state.model) state.model = modelVazio();
+    state.model.perfumes.push({ nome: "", preco_alvo: null, links: [""] }); renderEditor();
+    var n = $("nome-" + (state.model.perfumes.length - 1)); if (n) n.focus();
+  });
+  $("discard").addEventListener("click", function () { state.model = JSON.parse(state.saved); renderEditor(); say("Alterações descartadas.", "ok"); });
+  $("copy-json").addEventListener("click", function () {
+    var s = serial(), ta = $("json-view");
+    function fallback() { ta.parentNode.open = true; ta.value = s; ta.focus(); ta.select(); say("Selecionei o JSON abaixo. Copie com Ctrl+C e cole em produtos.json no GitHub."); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(s).then(function () { say("JSON copiado. Cole em produtos.json no GitHub.", "ok"); }, fallback); else fallback();
+  });
+
+  /* ---------- GitHub ---------- */
+  function cfg() {
+    var repo = ($("gh-repo").value || "").trim().replace(/^https?:\/\/github\.com\//, "").replace(/\.git$/, "").replace(/\/$/, "");
+    return { repo: repo, branch: ($("gh-branch").value || "main").trim(), token: ($("gh-token").value || "").trim() };
+  }
+  function gh(path, opts, c) {
+    opts = opts || {}; c = c || cfg();
+    var headers = { "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+    if (c.token) headers.Authorization = "Bearer " + c.token;
+    if (opts.body) headers["Content-Type"] = "application/json";
+    return fetch("https://api.github.com/repos/" + c.repo + path, { method: opts.method || "GET", headers: headers, body: opts.body });
+  }
+  function erroGh(r) {
+    if (r.status === 401) return "O GitHub recusou o token. Confira se ele está correto e não expirou.";
+    if (r.status === 403 || r.status === 404) return "O GitHub não encontrou o repositório ou o token não tem permissão. Confira o nome e as permissões Contents e Actions.";
+    if (r.status === 409 || r.status === 422) return "O arquivo mudou no GitHub desde que foi carregado. Recarregue a página e refaça a alteração.";
+    return "O GitHub respondeu com erro " + r.status + ".";
+  }
+  function b64(s) { var by = new TextEncoder().encode(s), bin = ""; by.forEach(function (x) { bin += String.fromCharCode(x); }); return btoa(bin); }
+  function unb64(s) { var bin = atob(s.replace(/\n/g, "")), by = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i); return new TextDecoder().decode(by); }
+  function conectado() { var c = cfg(); return !!(c.repo && c.token); }
+
+  function carregarConfig() {
+    var c = cfg();
+    function fallback() {
+      state.model = state.demo || !state.hist ? (state.demo ? modelDoHistorico(state.hist) : modelVazio()) : modelDoHistorico(state.hist);
+      finish();
+    }
+    function finish() { state.saved = serial(); state.loadedModel = true; renderEditor(); }
+    if (state.demo || !c.repo) return fallback();
+    gh("/contents/produtos.json?ref=" + encodeURIComponent(c.branch), {}, c).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    }).then(function (j) {
+      var o = JSON.parse(unb64(j.content)); state.sha = j.sha;
+      state.model = { queda_minima_pct: o.queda_minima_pct == null ? 5 : o.queda_minima_pct, perfumes: (o.perfumes || []).map(function (p) { return { nome: p.nome || "", preco_alvo: p.preco_alvo || null, links: (p.links || []).slice() }; }) };
+      finish();
+    }).catch(function () { fallback(); });
+  }
+
+  $("save").addEventListener("click", function () {
+    if (state.demo) return say("Esta é a versão de demonstração. No seu site publicado no GitHub Pages, este botão grava o produtos.json no repositório.", "err");
+    if (!conectado()) { say("Conecte o GitHub primeiro, ou use “Copiar JSON”.", "err"); return go("conexao"); }
+    var c = cfg(), body = { message: "Atualiza lista de perfumes pelo painel", content: b64(serial()), branch: c.branch };
+    if (state.sha) body.sha = state.sha;
+    $("save").disabled = true; say("Salvando no GitHub…");
+    gh("/contents/produtos.json", { method: "PUT", body: JSON.stringify(body) }, c).then(function (r) {
+      if (!r.ok) throw new Error(erroGh(r));
+      return r.json();
+    }).then(function (j) {
+      state.sha = j.content.sha; state.saved = serial(); marcarSujo();
+      say("Lista salva no repositório. Clique em “Rodar agora” para ler os preços dos novos links.", "ok");
+    }).catch(function (e) { say(esc(e.message === "Failed to fetch" ? "Sem conexão com o GitHub." : e.message), "err"); })
+      .then(function () { $("save").disabled = false; });
+  });
+
+  $("run").addEventListener("click", function () {
+    if (state.demo) return say("Esta é a versão de demonstração. No seu site publicado, este botão pede ao GitHub para ler os preços agora.", "err");
+    if (!conectado()) { say("Conecte o GitHub para poder rodar a leitura por aqui.", "err"); return go("conexao"); }
+    var c = cfg(); $("run").disabled = true; say("Pedindo ao GitHub para rodar…");
+    gh("/actions/workflows/rastrear.yml/dispatches", { method: "POST", body: JSON.stringify({ ref: c.branch }) }, c).then(function (r) {
+      if (r.status !== 204) throw new Error(erroGh(r));
+      say("Leitura iniciada. Leva cerca de 1 a 2 minutos; depois recarregue esta página para ver os preços novos.", "ok");
+    }).catch(function (e) { say(esc(e.message === "Failed to fetch" ? "Sem conexão com o GitHub." : e.message), "err"); })
+      .then(function () { $("run").disabled = false; });
+  });
+
+  $("gh-save").addEventListener("click", function () {
+    var c = cfg();
+    if (!/^[\w.-]+\/[\w.-]+$/.test(c.repo)) return say("Escreva o repositório no formato usuário/nome.", "err");
+    if (!c.token) return say("Cole o token de acesso.", "err");
+    say("Testando…");
+    gh("", {}, c).then(function (r) {
+      if (!r.ok) throw new Error(erroGh(r));
+      return r.json();
+    }).then(function (j) {
+      if (j.permissions && !j.permissions.push) throw new Error("O token só lê o repositório. Ele precisa de Contents: Read and write.");
+      store("radar-gh", JSON.stringify({ repo: c.repo, branch: c.branch, token: c.token }));
+      state.demo = false; state.loadedModel = false;
+      say("Conectado a " + esc(j.full_name) + ".", "ok");
+    }).catch(function (e) { say(esc(e.message === "Failed to fetch" ? "Sem conexão com o GitHub." : e.message), "err"); });
+  });
+  $("gh-clear").addEventListener("click", function () { store("radar-gh", null); $("gh-token").value = ""; say("Token removido deste navegador.", "ok"); });
+
+  /* ---------- abas ---------- */
+  var TABS = ["painel", "perfumes", "conexao"];
+  function go(tab) {
+    if (TABS.indexOf(tab) < 0) tab = "painel";
+    state.tab = tab;
+    TABS.forEach(function (t) {
+      $("v-" + t).hidden = t !== tab;
+      $("t-" + t).setAttribute("aria-selected", t === tab ? "true" : "false");
+    });
+    if (tab === "perfumes" && !state.loadedModel) carregarConfig();
+    if (tab === "painel" && state.hist) renderPainel();
+    try { history.replaceState(null, "", "#" + tab); } catch (e) {}
+  }
+  document.querySelector(".tabs").addEventListener("click", function (e) { var b = e.target.closest("[data-tab]"); if (b) { say(""); go(b.dataset.tab); } });
+
+  var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(function () { if (state.tab === "painel" && state.hist) renderPainel(); }, 150); });
+
+  /* ---------- início ---------- */
+  (function () {
+    var saved = null; try { saved = JSON.parse(load("radar-gh") || "null"); } catch (e) {}
+    if (saved) { $("gh-repo").value = saved.repo || ""; $("gh-branch").value = saved.branch || "main"; $("gh-token").value = saved.token || ""; }
+    else if (onPages) { var parts = location.pathname.split("/").filter(Boolean); $("gh-repo").value = location.hostname.split(".")[0] + "/" + (parts[0] || ""); }
+    var h = (location.hash || "").replace("#", "");
+    go(TABS.indexOf(h) >= 0 ? h : "painel");
+    fetch("historico.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) { state.hist = d; }, function () {
+        if (!onPages) { state.hist = demoData(); state.demo = true; } else state.hist = { itens: {} };
+      }).then(function () { renderPainel(); if (state.tab === "perfumes") carregarConfig(); });
+  })();
+})();
+</script>
+</body>
+</html>
