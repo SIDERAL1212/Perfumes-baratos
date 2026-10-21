@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preços de Perfumes</title>
+<style>
+  :root {
+    --bg: #faf8f5; --card: #ffffff; --txt: #231f1c; --mut: #7a716a;
+    --linha: #e8e2da; --acc: #8a4b2a; --ok: #1f7a4d; --ruim: #b3382c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #17140f; --card: #211d18; --txt: #f1ece5; --mut: #a39a8f;
+            --linha: #36302a; --acc: #d9a06f; --ok: #5cc98f; --ruim: #ef7d70; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--mut); margin-bottom: 24px; font-size: 13px; }
+  .card { background: var(--card); border: 1px solid var(--linha);
+          border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 17px; margin: 0 0 2px; }
+  .alvo { color: var(--mut); font-size: 13px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-top: 1px solid var(--linha);
+           font-size: 14px; vertical-align: middle; }
+  th { color: var(--mut); font-weight: 500; font-size: 12px; border-top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: var(--acc); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .melhor td:first-child { font-weight: 600; }
+  .melhor .atual { color: var(--ok); font-weight: 600; }
+  .erro { color: var(--ruim); font-size: 12px; }
+  .spark { width: 110px; height: 28px; display: block; }
+  .vazio { color: var(--mut); padding: 24px; text-align: center; }
+  @media (max-width: 560px) { .spark, .col-spark { display: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Preços de perfumes</h1>
+  <div class="sub" id="sub">Carregando…</div>
+  <div id="lista"></div>
+</main>
+<script>
+const brl = v => v == null ? "—" :
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function spark(leituras) {
+  const p = leituras.map(l => l.preco);
+  if (p.length < 2) return "";
+  const min = Math.min(...p), max = Math.max(...p), W = 110, H = 28;
+  const dx = W / (p.length - 1);
+  const pts = p.map((v, i) =>
+    `${(i * dx).toFixed(1)},${(max === min ? H / 2 : H - 3 - ((v - min) / (max - min)) * (H - 6)).toFixed(1)}`
+  ).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    <polyline points="${pts}" fill="none" stroke="var(--acc)" stroke-width="1.6"
+      stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function carregar() {
+  let dados;
+  try {
+    const r = await fetch("historico.json", { cache: "no-store" });
+    dados = await r.json();
+  } catch (e) {
+    document.getElementById("sub").textContent = "";
+    document.getElementById("lista").innerHTML =
+      '<div class="vazio">Ainda não há dados. Rode o rastreador pelo menos uma vez.</div>';
+    return;
+  }
+  const grupos = {};
+  for (const [url, it] of Object.entries(dados.itens || {})) {
+    (grupos[it.nome] ||= { alvo: it.alvo, lojas: [] }).lojas.push({ url, ...it });
+  }
+  if (dados.atualizado_em) {
+    document.getElementById("sub").textContent =
+      "Última leitura: " + new Date(dados.atualizado_em).toLocaleString("pt-BR");
+  }
+  const html = Object.entries(grupos).map(([nome, g]) => {
+    const linhas = g.lojas.map(l => {
+      const ls = l.leituras || [];
+      const atual = ls.length ? ls[ls.length - 1].preco : null;
+      const menor = ls.length ? Math.min(...ls.map(x => x.preco)) : null;
+      return { ...l, atual, menor };
+    });
+    const validos = linhas.filter(l => l.atual != null).map(l => l.atual);
+    const melhor = validos.length ? Math.min(...validos) : null;
+    const corpo = linhas.map(l => `
+      <tr class="${l.atual != null && l.atual === melhor ? "melhor" : ""}">
+        <td><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.loja)}</a>
+            ${l.erro ? `<div class="erro">${esc(l.erro)}</div>` : ""}</td>
+        <td class="num atual">${brl(l.atual)}</td>
+        <td class="num">${brl(l.menor)}</td>
+        <td class="col-spark">${spark(l.leituras || [])}</td>
+      </tr>`).join("");
+    return `<section class="card">
+      <h2>${esc(nome)}</h2>
+      <div class="alvo">${g.alvo ? "Alvo: " + brl(g.alvo) : "Sem preço-alvo"}</div>
+      <table>
+        <tr><th>Loja</th><th class="num">Atual</th><th class="num">Menor visto</th><th class="col-spark">Histórico</th></tr>
+        ${corpo}
+      </table></section>`;
+  }).join("");
+  document.getElementById("lista").innerHTML = html ||
+    '<div class="vazio">Nenhum link cadastrado ainda.</div>';
+}
+carregar();
+</script>
+</body>
+</html>
